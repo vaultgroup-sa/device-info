@@ -68,7 +68,7 @@ a:hover { color: var(--accent-hover); }
 
 .dw-row:hover { background: var(--row-hover); }
 
-.trash-btn { color: var(--muted); }
+.trash-btn { color: var(--muted); transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
 .trash-btn:hover { border-color: var(--empty); background: var(--empty-bg); color: var(--empty); }
 
 .dw-card {

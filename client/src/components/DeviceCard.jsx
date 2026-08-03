@@ -42,7 +42,7 @@ export default function DeviceCard({ device, now, justChanged, onDeleteClick }) 
             Box {device.id}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={device.status}
@@ -55,7 +55,7 @@ export default function DeviceCard({ device, now, justChanged, onDeleteClick }) 
             </motion.div>
           </AnimatePresence>
           {onDeleteClick && (
-            <TrashButton onClick={() => onDeleteClick(device)} />
+            <TrashButton onClick={() => onDeleteClick(device)} style={{ marginRight: -6 }} />
           )}
         </div>
       </div>

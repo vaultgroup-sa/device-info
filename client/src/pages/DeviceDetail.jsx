@@ -82,7 +82,7 @@ export default function DeviceDetail() {
           <button className="dw-btn" onClick={load} disabled={refreshing}>
             {refreshing ? '⟳ Refreshing…' : '⟳ Fetch latest'}
           </button>
-          <TrashButton title="Delete device" onClick={() => setConfirmOpen(true)} style={{ width: 40, height: 40 }} />
+          <TrashButton title="Delete device" onClick={() => setConfirmOpen(true)} bordered style={{ width: 40, height: 40 }} />
         </div>
       </div>
 
