@@ -48,4 +48,11 @@ router.get('/devices/:id', (req, res) => {
   res.json(device);
 });
 
+// DELETE /api/devices/:id -- permanently removes the device and its history
+router.delete('/devices/:id', async (req, res) => {
+  const deleted = await db.deleteDevice(req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'device not found' });
+  res.json({ ok: true, id: req.params.id });
+});
+
 module.exports = router;

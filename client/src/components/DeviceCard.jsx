@@ -2,9 +2,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import StatusBadge from './StatusBadge.jsx';
+import TrashButton from './TrashButton.jsx';
 import { formatRelative, formatAbsolute } from '../utils/time.js';
 
-export default function DeviceCard({ device, now, justChanged }) {
+export default function DeviceCard({ device, now, justChanged, onDeleteClick }) {
   const isFull = device.status === 1;
   const [pulse, setPulse] = useState(false);
 
@@ -41,17 +42,22 @@ export default function DeviceCard({ device, now, justChanged }) {
             Box {device.id}
           </div>
         </div>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={device.status}
-            initial={{ opacity: 0, scale: 0.7 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.7 }}
-            transition={{ duration: 0.25 }}
-          >
-            <StatusBadge status={device.status} />
-          </motion.div>
-        </AnimatePresence>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={device.status}
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              transition={{ duration: 0.25 }}
+            >
+              <StatusBadge status={device.status} />
+            </motion.div>
+          </AnimatePresence>
+          {onDeleteClick && (
+            <TrashButton onClick={() => onDeleteClick(device)} />
+          )}
+        </div>
       </div>
 
       <div

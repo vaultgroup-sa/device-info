@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DeviceCard from '../components/DeviceCard.jsx';
-import { getDevices, getDeviceSummaryCounts, subscribeToDeviceUpdates } from '../api.js';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { getDevices, getDeviceSummaryCounts, subscribeToDeviceUpdates, deleteDevice } from '../api.js';
 
 const TICK_MS = 1000;
 const RECENT_MS = 1200;
@@ -13,7 +14,34 @@ export default function Dashboard() {
   const [recentlyChanged, setRecentlyChanged] = useState({});
   const [connected, setConnected] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const recentTimers = useRef({});
+
+  const removeFromList = (id) => {
+    setDevices((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await deleteDevice(pendingDelete.id);
+      removeFromList(pendingDelete.id);
+      setCounts((prev) => ({
+        total: Math.max(0, prev.total - 1),
+        full: prev.full - (pendingDelete.status === 1 ? 1 : 0),
+        empty: prev.empty - (pendingDelete.status === 1 ? 0 : 1),
+      }));
+      setPendingDelete(null);
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete device');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -36,27 +64,34 @@ export default function Dashboard() {
   }, [load]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToDeviceUpdates((update) => {
-      setConnected(true);
-      setDevices((prev) => {
-        const idx = prev.findIndex((d) => d.id === update.id);
-        if (idx === -1) return [update, ...prev];
-        const next = [...prev];
-        next[idx] = { ...next[idx], ...update };
-        return next;
-      });
-      setRecentlyChanged((prev) => ({ ...prev, [update.id]: true }));
-      clearTimeout(recentTimers.current[update.id]);
-      recentTimers.current[update.id] = setTimeout(() => {
-        setRecentlyChanged((prev) => {
-          const next = { ...prev };
-          delete next[update.id];
+    const unsubscribe = subscribeToDeviceUpdates(
+      (update) => {
+        setConnected(true);
+        setDevices((prev) => {
+          const idx = prev.findIndex((d) => d.id === update.id);
+          if (idx === -1) return [update, ...prev];
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...update };
           return next;
         });
-      }, RECENT_MS);
-      // Counts can drift from optimistic math above; just resync from the server.
-      getDeviceSummaryCounts().then(setCounts).catch(() => {});
-    });
+        setRecentlyChanged((prev) => ({ ...prev, [update.id]: true }));
+        clearTimeout(recentTimers.current[update.id]);
+        recentTimers.current[update.id] = setTimeout(() => {
+          setRecentlyChanged((prev) => {
+            const next = { ...prev };
+            delete next[update.id];
+            return next;
+          });
+        }, RECENT_MS);
+        // Counts can drift from optimistic math above; just resync from the server.
+        getDeviceSummaryCounts().then(setCounts).catch(() => {});
+      },
+      (deleted) => {
+        // Someone deleted this device from another tab/page -- drop it here too.
+        removeFromList(deleted.id);
+        getDeviceSummaryCounts().then(setCounts).catch(() => {});
+      }
+    );
     const timeout = setTimeout(() => setConnected(true), 500);
     return () => {
       unsubscribe();
@@ -110,11 +145,27 @@ export default function Dashboard() {
         >
           <AnimatePresence>
             {sorted.map((d) => (
-              <DeviceCard key={d.id} device={d} now={now} justChanged={!!recentlyChanged[d.id]} />
+              <DeviceCard
+                key={d.id}
+                device={d}
+                now={now}
+                justChanged={!!recentlyChanged[d.id]}
+                onDeleteClick={setPendingDelete}
+              />
             ))}
           </AnimatePresence>
         </motion.div>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={`Delete Box ${pendingDelete?.id ?? ''}?`}
+        message="This permanently removes the device and its entire status history. This can't be undone."
+        busy={deleteBusy}
+        error={deleteError}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => { setPendingDelete(null); setDeleteError(null); }}
+      />
     </main>
   );
 }

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getDevices } from '../api.js';
+import { getDevices, deleteDevice } from '../api.js';
 import StatusBadge from '../components/StatusBadge.jsx';
+import TrashButton from '../components/TrashButton.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { formatRelative, formatAbsolute } from '../utils/time.js';
 
 const PAGE_SIZE = 10;
@@ -13,6 +15,9 @@ export default function DeviceList() {
   const [result, setResult] = useState({ devices: [], total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,6 +44,21 @@ export default function DeviceList() {
   const onSearch = (e) => { setSearch(e.target.value); setPage(1); };
   const onStatusFilter = (e) => { setStatus(e.target.value); setPage(1); };
   const onClearFilters = () => { setSearch(''); setStatus('all'); setPage(1); };
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await deleteDevice(pendingDelete.id);
+      setPendingDelete(null);
+      await load();
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete device');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
 
   const { devices, total, totalPages } = result;
   const isFirstPage = page <= 1;
@@ -73,14 +93,14 @@ export default function DeviceList() {
       </div>
 
       <div className="dw-card" style={{ overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1.4fr 1.4fr 1fr', padding: '16px 24px', fontSize: 12.5, fontWeight: 700, color: 'var(--muted)' }}>
-          <div>Device</div><div>Status</div><div>Last Updated</div><div>Registered</div><div></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1.4fr 1.4fr 1fr 40px', padding: '16px 24px', fontSize: 12.5, fontWeight: 700, color: 'var(--muted)' }}>
+          <div>Device</div><div>Status</div><div>Last Updated</div><div>Registered</div><div></div><div></div>
         </div>
         {devices.map((d) => (
           <div
             key={d.id}
             className="dw-row"
-            style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1.4fr 1.4fr 1fr', padding: '16px 24px', borderTop: '1px solid #f1f0f5', alignItems: 'center' }}
+            style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1.4fr 1.4fr 1fr 40px', padding: '16px 24px', borderTop: '1px solid #f1f0f5', alignItems: 'center' }}
           >
             <div style={{ fontWeight: 700, fontSize: 14.5, color: d.status === 1 ? 'var(--full)' : 'var(--empty)' }}>
               Box {d.id}
@@ -90,6 +110,9 @@ export default function DeviceList() {
             <div style={{ fontSize: 14, color: 'var(--muted)' }}>{formatAbsolute(d.registeredAt)}</div>
             <div style={{ textAlign: 'right' }}>
               <Link to={`/devices/${d.id}`} style={{ fontWeight: 600 }}>View History →</Link>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <TrashButton onClick={() => setPendingDelete(d)} />
             </div>
           </div>
         ))}
@@ -108,6 +131,16 @@ export default function DeviceList() {
           <button className="dw-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={isLastPage}>Next →</button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={`Delete Box ${pendingDelete?.id ?? ''}?`}
+        message="This permanently removes the device and its entire status history. This can't be undone."
+        busy={deleteBusy}
+        error={deleteError}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => { setPendingDelete(null); setDeleteError(null); }}
+      />
     </main>
   );
 }

@@ -68,6 +68,9 @@ a:hover { color: var(--accent-hover); }
 
 .dw-row:hover { background: var(--row-hover); }
 
+.trash-btn { color: var(--muted); }
+.trash-btn:hover { border-color: var(--empty); background: var(--empty-bg); color: var(--empty); }
+
 .dw-card {
   background: #fff;
   border-radius: 18px;

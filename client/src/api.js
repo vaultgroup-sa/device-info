@@ -1,7 +1,7 @@
 const BASE = '/api';
 
-async function request(path) {
-  const res = await fetch(`${BASE}${path}`);
+async function request(path, options) {
+  const res = await fetch(`${BASE}${path}`, options);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `Request failed: ${res.status}`);
@@ -22,8 +22,15 @@ export function getDevice(id) {
   return request(`/devices/${encodeURIComponent(id)}`);
 }
 
-// Subscribes to the live SSE feed. Returns an unsubscribe function.
-export function subscribeToDeviceUpdates(onUpdate) {
+// Permanently deletes a device and its full status history.
+export function deleteDevice(id) {
+  return request(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+// Subscribes to the live SSE feed. `onUpdate` fires on status changes,
+// `onDelete` fires when a device is removed (from any client). Returns an
+// unsubscribe function.
+export function subscribeToDeviceUpdates(onUpdate, onDelete) {
   const source = new EventSource(`${BASE}/stream`);
   source.addEventListener('device-update', (evt) => {
     try {
@@ -32,5 +39,14 @@ export function subscribeToDeviceUpdates(onUpdate) {
       // ignore malformed events
     }
   });
+  if (onDelete) {
+    source.addEventListener('device-deleted', (evt) => {
+      try {
+        onDelete(JSON.parse(evt.data));
+      } catch (err) {
+        // ignore malformed events
+      }
+    });
+  }
   return () => source.close();
 }

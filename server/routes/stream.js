@@ -25,6 +25,9 @@ router.get('/stream', (req, res) => {
   const unsubscribe = db.onDeviceUpdate((payload) => {
     send('device-update', payload);
   });
+  const unsubscribeDelete = db.onDeviceDeleted((payload) => {
+    send('device-deleted', payload);
+  });
 
   const heartbeat = setInterval(() => {
     res.write(': ping\n\n');
@@ -33,6 +36,7 @@ router.get('/stream', (req, res) => {
   req.on('close', () => {
     clearInterval(heartbeat);
     unsubscribe();
+    unsubscribeDelete();
     res.end();
   });
 });

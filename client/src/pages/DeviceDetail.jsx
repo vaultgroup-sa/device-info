@@ -1,16 +1,34 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getDevice } from '../api.js';
+import { getDevice, deleteDevice } from '../api.js';
 import StatusBadge from '../components/StatusBadge.jsx';
+import TrashButton from '../components/TrashButton.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { formatRelative, formatAbsolute, formatHistoryLabel } from '../utils/time.js';
 
 export default function DeviceDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [device, setDevice] = useState(null);
   const [error, setError] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [refreshing, setRefreshing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+
+  const handleDeleteConfirm = async () => {
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await deleteDevice(id);
+      navigate('/devices');
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete device');
+      setDeleteBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -60,9 +78,12 @@ export default function DeviceDetail() {
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 4 }}>{device.id}</div>
           <h1 className="heading" style={{ fontSize: 34, fontWeight: 700 }}>Box {device.id}</h1>
         </div>
-        <button className="dw-btn" onClick={load} disabled={refreshing}>
-          {refreshing ? '⟳ Refreshing…' : '⟳ Fetch latest'}
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="dw-btn" onClick={load} disabled={refreshing}>
+            {refreshing ? '⟳ Refreshing…' : '⟳ Fetch latest'}
+          </button>
+          <TrashButton title="Delete device" onClick={() => setConfirmOpen(true)} style={{ width: 40, height: 40 }} />
+        </div>
       </div>
 
       <div
@@ -146,6 +167,16 @@ export default function DeviceDetail() {
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Delete Box ${device.id}?`}
+        message="This permanently removes the device and its entire status history. This can't be undone."
+        busy={deleteBusy}
+        error={deleteError}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => { setConfirmOpen(false); setDeleteError(null); }}
+      />
     </main>
   );
 }

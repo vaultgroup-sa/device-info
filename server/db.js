@@ -145,6 +145,27 @@ function onDeviceUpdate(listener) {
   return () => emitter.off('device-update', listener);
 }
 
+function onDeviceDeleted(listener) {
+  emitter.on('device-deleted', listener);
+  return () => emitter.off('device-deleted', listener);
+}
+
+/**
+ * Permanently removes a device and its entire status history. This is a
+ * deliberate, infrequent user action (unlike pings, which are debounced), so
+ * it flushes to disk immediately and awaits the write before returning --
+ * the caller only gets a success response once the .json file actually
+ * reflects the deletion.
+ */
+async function deleteDevice(deviceId) {
+  const existed = !!state.devices[deviceId];
+  if (!existed) return false;
+  delete state.devices[deviceId];
+  await flushNow();
+  emitter.emit('device-deleted', { id: deviceId });
+  return true;
+}
+
 /** Testing/demo helper: wipe all state and delete the persisted file. */
 async function resetAll() {
   state = { devices: {} };
@@ -156,7 +177,9 @@ module.exports = {
   listDevices,
   getDevice,
   getSummaryCounts,
+  deleteDevice,
   onDeviceUpdate,
+  onDeviceDeleted,
   flushNow,
   resetAll,
 };
