@@ -104,3 +104,37 @@ a:hover { color: var(--accent-hover); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #ddd9ea; border-radius: 999px; }
+
+/* ---------- Footer (Vaultgroup logo) ---------- */
+.dw-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 18px 56px;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+.dw-footer__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.dw-footer__logo {
+  display: block;
+  height: 32px;          /* desktop */
+  width: auto;
+  max-width: 100%;
+  border-radius: 5px;    /* logo keeps its black badge – white text needs it on the light bg */
+}
+@media (max-width: 1024px) {          /* tablet */
+  .dw-footer { padding: 16px 32px; }
+  .dw-footer__logo { height: 30px; }
+}
+@media (max-width: 600px) {           /* mobile */
+  .dw-footer { padding: 14px 16px; gap: 8px; flex-direction: column; }
+  .dw-footer__label { font-size: 12px; }
+  .dw-footer__logo { height: 28px; }
+}
